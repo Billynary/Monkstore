@@ -21,6 +21,21 @@
   --transition: 150ms ease-out;
 }
 
+/* Intentionally Vulnerable App Warning Banner */
+.vuln-banner {
+  background: #d32f2f;
+  color: #fff;
+  text-align: center;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  position: sticky;
+  top: 0;
+  z-index: 9999;
+  border-bottom: 2px solid #b71c1c;
+}
+
 /* Reset & Base Styles */
 * {
   margin: 0;

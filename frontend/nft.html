@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <div class="vuln-banner">⚠️ This app is intentionally vulnerable. For local testing only.</div>
     <header class="header">
         <nav class="nav">
             <a href="index.html" class="nav__logo">
@@ -26,12 +27,90 @@
 
     <main class="main">
         <div class="container">
-            <h1 class="text-3xl font-bold capitalize">NFT Page</h1>
+            <div id="nftDetail" style="padding:2rem 0;">
+                <p style="color:var(--color-text)">Loading NFT...</p>
+            </div>
+
+            <section style="margin-top:2rem;">
+                <h2 style="color:var(--color-text);margin-bottom:1rem;">Community Reviews</h2>
+
+                <!-- Review form – author field is user-controlled for stored XSS demo -->
+                <form id="reviewForm" style="display:flex;flex-direction:column;gap:.75rem;max-width:500px;margin-bottom:2rem;">
+                    <input id="reviewAuthor" type="text" placeholder="Your name" style="padding:.5rem;background:var(--color-card);color:var(--color-text);border:1px solid var(--color-border);border-radius:4px;">
+                    <textarea id="reviewContent" rows="3" placeholder="Write a review… (HTML allowed)" style="padding:.5rem;background:var(--color-card);color:var(--color-text);border:1px solid var(--color-border);border-radius:4px;resize:vertical;"></textarea>
+                    <button type="submit" class="btn btn--primary" style="align-self:flex-start;">Post Review</button>
+                    <div id="reviewStatus" style="font-size:.8rem;color:var(--color-primary);"></div>
+                </form>
+
+                <!-- VULN: reviews rendered via innerHTML → stored XSS -->
+                <div id="reviewsList"></div>
+            </section>
         </div>
     </main>
-    
-    <script type="module" src="js/main.js"></script>
-    <script type="module" src="js/api.js"></script>
+
     <script type="module" src="js/auth-ui.js"></script>
+    <script>
+      const params  = new URLSearchParams(location.search);
+      const nftId   = params.get('id') || 'monk-001';
+
+      // Load NFT detail
+      fetch(`/api/monkeys/${nftId}`)
+        .then(r => r.json())
+        .then(nft => {
+          document.getElementById('nftDetail').innerHTML = `
+            <div style="display:flex;gap:2rem;align-items:flex-start;flex-wrap:wrap;">
+              <img src="${nft.image}" alt="${nft.name}" width="220" height="220" style="border-radius:8px;">
+              <div>
+                <h1 style="color:var(--color-text);margin-bottom:.5rem;">${nft.name}</h1>
+                <span style="color:var(--color-primary);">${nft.rarity}</span>
+                <p style="color:var(--color-text);margin-top:.5rem;">Price: $${nft.price?.toLocaleString()}</p>
+              </div>
+            </div>`;
+        })
+        .catch(() => {
+          document.getElementById('nftDetail').innerHTML = '<p style="color:#f66;">NFT not found</p>';
+        });
+
+      // Load reviews – VULN: content rendered as innerHTML
+      function loadReviews() {
+        fetch(`/api/reviews?nftId=${encodeURIComponent(nftId)}`)
+          .then(r => r.json())
+          .then(reviews => {
+            const list = document.getElementById('reviewsList');
+            if (!reviews.length) {
+              list.innerHTML = '<p style="color:var(--color-text);opacity:.6;">No reviews yet.</p>';
+              return;
+            }
+            list.innerHTML = reviews.map(r =>
+              `<div style="background:var(--color-card);border:1px solid var(--color-border);border-radius:8px;padding:1rem;margin-bottom:.75rem;">
+                 <strong style="color:var(--color-primary);">${r.author}</strong>
+                 <div style="color:var(--color-text);margin-top:.4rem;">${r.content}</div>
+               </div>`
+            ).join('');
+          });
+      }
+      loadReviews();
+
+      // Submit review
+      document.getElementById('reviewForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        const author  = document.getElementById('reviewAuthor').value || 'anonymous';
+        const content = document.getElementById('reviewContent').value;
+        const status  = document.getElementById('reviewStatus');
+        if (!content) return;
+        const res = await fetch('/api/reviews', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nftId, author, content })
+        });
+        if (res.ok) {
+          status.textContent = 'Review posted!';
+          document.getElementById('reviewContent').value = '';
+          loadReviews();
+        } else {
+          status.textContent = 'Error posting review.';
+        }
+      });
+    </script>
 </body>
 </html>

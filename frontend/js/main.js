@@ -103,7 +103,10 @@ function initializeShop() {
     if (!nftGrid) return;
     
     if (nfts.length === 0) {
-      nftGrid.innerHTML = '<div class="loading">No NFTs found matching your criteria</div>';
+      // VULN: search term rendered via innerHTML without sanitization → reflected XSS
+      // try: <img src=x onerror=alert(1)> in the search box
+      const term = document.getElementById('searchInput')?.value || '';
+      nftGrid.innerHTML = `<div class="loading">No results for: <em>${term}</em></div>`;
       return;
     }
     

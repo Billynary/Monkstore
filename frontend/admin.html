@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel - Monkey Marketplace</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="vuln-banner">⚠️ This app is intentionally vulnerable. For local testing only.</div>
+  <header class="header">
+    <nav class="nav">
+      <a href="index.html" class="nav__logo">
+        <span class="nav__logo-emoji">🐒</span>
+        <span class="nav__logo-text">Monkey Marketplace</span>
+      </a>
+      <ul class="nav__links">
+        <li><a href="shop.html" class="nav__link">Shop</a></li>
+        <li><a href="login.html" class="nav__link">Login</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="main">
+    <div class="container" style="padding:2rem 0;">
+      <h1 style="color:var(--color-text);margin-bottom:.5rem;">Admin Panel</h1>
+      <!-- VULN: page accessible by anyone who navigates here; no server-side auth on /api/admin/users -->
+      <!-- The API check is bypassed by adding X-Admin: true header -->
+      <p style="color:#f66;font-size:.85rem;margin-bottom:1.5rem;">
+        This route has no frontend auth guard. The API endpoint checks only for<br>
+        <code style="background:var(--color-card);padding:2px 6px;border-radius:3px;">X-Admin: true</code> header — add it in DevTools to bypass.
+      </p>
+
+      <button id="loadUsers" class="btn btn--primary" style="margin-bottom:1.5rem;">Load All Users</button>
+
+      <div id="usersTable"></div>
+
+      <hr style="border-color:var(--color-border);margin:2rem 0;">
+
+      <h2 style="color:var(--color-text);margin-bottom:1rem;">Debug Info</h2>
+      <button id="loadDebug" class="btn btn--primary" style="margin-bottom:1rem;">Load /api/debug</button>
+      <pre id="debugOutput" style="background:var(--color-card);color:var(--color-text);padding:1rem;border-radius:8px;overflow:auto;font-size:.8rem;display:none;"></pre>
+    </div>
+  </main>
+
+  <script>
+    document.getElementById('loadUsers').addEventListener('click', async () => {
+      const res = await fetch('/api/admin/users', {
+        headers: { 'X-Admin': 'true' }
+      });
+      const users = await res.json();
+      const el = document.getElementById('usersTable');
+      if (!Array.isArray(users)) {
+        el.innerHTML = `<pre style="color:#f66;">${JSON.stringify(users, null, 2)}</pre>`;
+        return;
+      }
+      el.innerHTML = `
+        <table style="width:100%;border-collapse:collapse;color:var(--color-text);">
+          <thead>
+            <tr style="border-bottom:1px solid var(--color-border);">
+              <th style="text-align:left;padding:.5rem;">ID</th>
+              <th style="text-align:left;padding:.5rem;">Username</th>
+              <th style="text-align:left;padding:.5rem;">Email</th>
+              <th style="text-align:left;padding:.5rem;">Password Hash</th>
+              <th style="text-align:left;padding:.5rem;">Joined</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${users.map(u => `
+              <tr style="border-bottom:1px solid var(--color-border);">
+                <td style="padding:.5rem;font-size:.75rem;opacity:.6;">${u.id}</td>
+                <td style="padding:.5rem;">${u.username}</td>
+                <td style="padding:.5rem;">${u.email}</td>
+                <td style="padding:.5rem;font-size:.75rem;font-family:monospace;">${u.password}</td>
+                <td style="padding:.5rem;font-size:.75rem;">${u.joined_at}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>`;
+    });
+
+    document.getElementById('loadDebug').addEventListener('click', async () => {
+      const res  = await fetch('/api/debug');
+      const data = await res.json();
+      const el   = document.getElementById('debugOutput');
+      el.textContent = JSON.stringify(data, null, 2);
+      el.style.display = 'block';
+    });
+  </script>
+</body>
+</html>
