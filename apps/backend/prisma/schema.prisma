@@ -1,0 +1,184 @@
+// Monkstore lab — Prisma schema (normalized)
+// NOTE: This is an intentionally vulnerable training app. Do not deploy publicly.
+// Credentials come from env (DATABASE_URL) — never hardcode.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------------
+// Users & wallet
+// ------------------------------------------------------------
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  username     String   @unique
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  isAdmin      Boolean  @default(false) @map("is_admin")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  wallet       Wallet?
+  ownerships   Ownership[]
+  cartItems    CartItem[]
+  transactions Transaction[]
+  deposits     Deposit[]
+
+  @@map("users")
+}
+
+model Wallet {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique @map("user_id") @db.Uuid
+  // In-app currency ("Monk Tokens"), integer units. Non-negative in the secure core.
+  balance   Int      @default(0)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("wallets")
+}
+
+// ------------------------------------------------------------
+// Catalog: NFTs ("monkeys") + traits
+// ------------------------------------------------------------
+model Nft {
+  id        String   @id // e.g. monk-001
+  name      String
+  imageUrl  String?  @map("image_url")
+  rarity    String
+  // Price is denominated in in-app tokens.
+  price     Int
+  createdAt DateTime @default(now()) @map("created_at")
+
+  traits     NftTrait?
+  ownerships Ownership[]
+  cartItems  CartItem[]
+  reviews    Review[]
+
+  @@map("nfts")
+}
+
+model NftTrait {
+  nftId      String @id @map("nft_id")
+  background String
+  fur        String
+  headgear   String
+  prop       String
+
+  nft Nft @relation(fields: [nftId], references: [id], onDelete: Cascade)
+
+  @@map("nft_traits")
+}
+
+// ------------------------------------------------------------
+// Inventory (owned NFTs) — editions allowed (multiple owners per catalog item)
+// ------------------------------------------------------------
+model Ownership {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  nftId         String   @map("nft_id")
+  acquiredAt    DateTime @default(now()) @map("acquired_at")
+  transactionId String?  @map("transaction_id") @db.Uuid
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nft         Nft          @relation(fields: [nftId], references: [id], onDelete: Cascade)
+  transaction Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@map("ownerships")
+}
+
+// ------------------------------------------------------------
+// Shopping cart
+// ------------------------------------------------------------
+model CartItem {
+  id       String   @id @default(uuid()) @db.Uuid
+  userId   String   @map("user_id") @db.Uuid
+  nftId    String   @map("nft_id")
+  quantity Int      @default(1)
+  addedAt  DateTime @default(now()) @map("added_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nft  Nft  @relation(fields: [nftId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, nftId])
+  @@map("cart_items")
+}
+
+// ------------------------------------------------------------
+// Transactions & deposits
+// ------------------------------------------------------------
+enum TransactionType {
+  PURCHASE
+  DEPOSIT
+  REFUND
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model Transaction {
+  id        String            @id @default(uuid()) @db.Uuid
+  userId    String            @map("user_id") @db.Uuid
+  type      TransactionType
+  // Signed token delta relative to the wallet (negative for purchases).
+  amount    Int
+  nftId     String?           @map("nft_id")
+  status    TransactionStatus @default(COMPLETED)
+  reference String?
+  createdAt DateTime          @default(now()) @map("created_at")
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ownerships Ownership[]
+
+  @@index([userId])
+  @@map("transactions")
+}
+
+enum DepositStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model Deposit {
+  id              String        @id @default(uuid()) @db.Uuid
+  userId          String        @map("user_id") @db.Uuid
+  // Tokens to be credited on completion.
+  tokens          Int
+  // Fiat amount in minor units (cents).
+  amountFiat      Int           @map("amount_fiat")
+  currency        String        @default("usd")
+  stripeSessionId String?       @map("stripe_session_id")
+  status          DepositStatus @default(PENDING)
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("deposits")
+}
+
+// ------------------------------------------------------------
+// Reviews (kept for the stored-XSS lab)
+// ------------------------------------------------------------
+model Review {
+  id        Int      @id @default(autoincrement())
+  nftId     String   @map("nft_id")
+  author    String   @default("anonymous")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  nft Nft @relation(fields: [nftId], references: [id], onDelete: Cascade)
+
+  @@index([nftId])
+  @@map("reviews")
+}

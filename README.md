@@ -1,60 +1,63 @@
-# Monkstore - The Place to buy Monkey NFTs
+# Monkstore — Intentionally Vulnerable NFT Marketplace (Security Lab)
 
-A modern, secure marketplace for trading unique Monkey NFTs with a beautiful dark-themed UI. Built with simplicity and performance in mind, Monkstore provides a seamless experience for discovering, collecting, and trading rare digital monkey collectibles.
+Monkstore is a **deliberately vulnerable** web application used as a personal
+security-training environment (DVWA / OWASP Juice Shop style). It looks like a
+small NFT marketplace where you buy "monkeys" with an in-app currency (Monk Tokens 🪙).
 
-## The Thoughts Behind It
+> ⚠️ **The entire app is a lab. Never expose it to a public network.**
 
-Monkstore was created to demonstrate a clean, minimalist approach to building a full-stack NFT marketplace. The project emphasizes:
-
-- **Zero-dependency backend**: Using only Node.js core modules for maximum simplicity and security
-- **Performance first**: Lightweight architecture with direct PostgreSQL queries via `psql` command
-- **Modern UX**: Sleek, dark-themed interface with smooth animations and responsive design
-- **Security by design**: JWT authentication, SQL injection prevention, and proper input validation
-
-The goal is to provide a practical example of a real-world NFT marketplace that balances simplicity with professional features, making it perfect for learning or as a foundation for more complex projects.
+Documented vulnerabilities live in [`VULNERABILITIES.md`](./VULNERABILITIES.md).
+Additional **hidden** challenges are kept in a sealed, gitignored `SOLUTIONS.md`
+that is never baked into any image.
 
 ## Tech Stack
 
-### Frontend
-- **HTML5**: Semantic markup with proper accessibility
-- **CSS3**: Custom styling with CSS variables, flexbox, and grid layouts
-- **Vanilla JavaScript**: Modular ES6+ JavaScript for client-side logic
-- **Nginx**: High-performance web server for static file serving
+- **Backend:** Node.js 22 + **TypeScript** + **Fastify** + **Zod**, data access via
+  **Prisma** (PostgreSQL). Passwords hashed with **argon2id**; custom HS256 JWTs.
+- **Frontend:** **Vite** + **TypeScript** (vanilla), served by nginx which also
+  reverse-proxies `/api` to the backend.
+- **Database:** dedicated **PostgreSQL** container; schema via Prisma migrations.
+- **Payments:** Stripe deposit module in **TEST mode only** (with a keyless
+  "simulate" fallback).
+- **Deploy:** Docker Compose for local dev; **Kubernetes** manifests in [`k8s/`](./k8s).
 
-### Backend
-- **Node.js 20**: Runtime environment using only core modules (http, url, child_process, crypto)
-- **No npm dependencies**: Zero external dependencies for maximum simplicity
-- **PostgreSQL**: Relational database for data persistence
-- **JWT Authentication**: Custom JWT implementation using Node.js crypto module
+## Layout
 
-### DevOps
-- **Docker**: Containerized services for easy deployment
-- **Docker Compose**: Multi-container orchestration (frontend, backend, database)
-- **Alpine Linux**: Minimal base images for reduced footprint
+```
+apps/backend      Fastify + Prisma API (secure core in src/routes, lab vulns in src/lab)
+apps/frontend     Vite + TS SPA (nginx serves it and proxies /api)
+k8s/              Kubernetes manifests (namespace monkstore-lab)
+docker-compose.yml
+.env / .env.example
+VULNERABILITIES.md    documented (known) vulns
+SOLUTIONS.md          sealed hidden-vuln answer key (gitignored, not in images)
+```
 
-### Security Features
-- **Password Hashing**: SHA-256 hashing with secret salt
-- **JWT Tokens**: Custom JWT implementation with HMAC-SHA256 signatures
-- **SQL Injection Prevention**: Parameterized queries with proper escaping
-- **CORS Configuration**: Configurable cross-origin resource sharing
-- **Input Validation**: Request validation and sanitization
+## Run locally (Docker)
 
-## Security Notes
+```bash
+cp .env.example .env        # then edit values (a dev .env is already present)
+docker compose up --build   # web on http://localhost:8081, API on :3000, db on :5432
 
-- Never commit the `.env` file or expose sensitive credentials
-- Use strong, unique values for `JWT_SECRET` in production
-- Ensure PostgreSQL is not exposed to public internet
-- Use HTTPS in production environments
-- Regularly update dependencies and base Docker images
+# Apply migrations + seed the catalog (first run):
+docker compose run --rm backend npx prisma migrate deploy
+docker compose run --rm backend npm run seed
+```
 
-## 🤝 Contributing
+Reset everything: `docker compose down -v && docker compose up --build`.
 
-This project is a demonstration/learning project. Feel free to fork and modify for your own purposes.
+## Kubernetes
 
-## 📄 License
+See [`k8s/README.md`](./k8s/README.md). Deploy only to a private/local cluster.
 
-This project is open source and available for educational purposes.
+## Secrets
+
+- `.env` and all `*.sql` **data** files are gitignored. Prisma **migrations**
+  (`apps/backend/prisma/migrations/**/*.sql`) are intentionally tracked (schema DDL,
+  no secrets). Anything matching `*secret*` is gitignored (incl. `k8s/secret.yaml`).
+- DB creds, `JWT_SECRET`, and Stripe test keys come from `.env` / K8s Secrets — never
+  hardcoded.
 
 ---
 
-**Built with ❤️ and 🐒 by the Monkstore team**
+**Built as a security playground. Break responsibly. 🐒**

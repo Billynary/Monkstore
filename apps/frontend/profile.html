@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile - Monkey Marketplace</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="vuln-banner">⚠️ This app is intentionally vulnerable. For local testing only.</div>
+  <header class="header">
+    <nav class="nav">
+      <a href="index.html" class="nav__logo"><span class="nav__logo-emoji">🐒</span><span class="nav__logo-text">Monkey Marketplace</span></a>
+      <ul class="nav__links">
+        <li><a href="shop.html" class="nav__link">Shop</a></li>
+        <li><a href="cart.html" class="nav__link">Cart <span class="nav__cart-badge" id="cartBadge">0</span></a></li>
+        <li><a href="profile.html" class="nav__link nav__link--active">Profile</a></li>
+        <li><a href="login.html" class="nav__link login-link">Login</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="main">
+    <div class="container">
+      <div class="profile">
+        <div class="profile__header">
+          <div class="profile__avatar"><div class="profile__avatar-placeholder">👤</div></div>
+          <div class="profile__info">
+            <h1 class="profile__name">Collector</h1>
+            <p class="profile__email">collector@example.com</p>
+          </div>
+        </div>
+
+        <!-- Wallet card -->
+        <div class="wallet-card" style="background:var(--color-card);border:1px solid var(--color-border);border-radius:12px;padding:1.5rem;margin:1.5rem 0;color:var(--color-text);">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+            <div>
+              <div style="opacity:.7;font-size:.85rem;">Balance</div>
+              <div style="font-size:2rem;font-weight:700;"><span id="walletBalance">—</span> 🪙</div>
+            </div>
+            <div style="display:flex;gap:1.5rem;flex-wrap:wrap;">
+              <form id="depositForm" style="display:flex;flex-direction:column;gap:.4rem;">
+                <label style="font-size:.8rem;opacity:.8;">Top up (mode: <span id="depositMode">…</span>)</label>
+                <div style="display:flex;gap:.4rem;">
+                  <input id="depositAmount" type="number" min="1" value="1000" style="width:110px;padding:.4rem;background:var(--color-bg);color:var(--color-text);border:1px solid var(--color-border);border-radius:4px;" />
+                  <button class="btn btn--primary" type="submit">Deposit</button>
+                </div>
+              </form>
+              <form id="promoForm" style="display:flex;flex-direction:column;gap:.4rem;">
+                <label style="font-size:.8rem;opacity:.8;">Promo code</label>
+                <div style="display:flex;gap:.4rem;">
+                  <input id="promoCode" type="text" placeholder="WELCOME" style="width:120px;padding:.4rem;background:var(--color-bg);color:var(--color-text);border:1px solid var(--color-border);border-radius:4px;" />
+                  <button class="btn" type="submit">Redeem</button>
+                </div>
+              </form>
+            </div>
+          </div>
+          <div id="walletStatus" style="margin-top:.75rem;font-size:.85rem;color:var(--color-primary);"></div>
+        </div>
+
+        <div class="tabs">
+          <div class="tabs__nav">
+            <button class="tabs__button tabs__button--active" data-tab="owned">Owned NFTs</button>
+            <button class="tabs__button" data-tab="orders">Transaction History</button>
+          </div>
+          <div class="tabs__content">
+            <div class="tabs__panel tabs__panel--active" id="ownedTab">
+              <div class="nft-grid" id="ownedNFTGrid"><div class="empty-state"><p>Loading…</p></div></div>
+            </div>
+            <div class="tabs__panel" id="ordersTab">
+              <div class="orders-table">
+                <table class="table" style="width:100%;color:var(--color-text);">
+                  <thead><tr><th style="text-align:left;">Type</th><th style="text-align:left;">Date</th><th style="text-align:left;">Amount</th><th style="text-align:left;">Ref</th></tr></thead>
+                  <tbody id="txTableBody"><tr><td colspan="4">Loading…</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <script type="module" src="/src/profile.ts"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# Non-secret configuration. Secrets live in the Secret (see secret.example.yaml).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: monkstore-config
+  namespace: monkstore-lab
+data:
+  PORT: "3000"
+  NODE_ENV: "production"
+  FRONTEND_ORIGIN: "http://monkstore.local"
+  POSTGRES_DB: "monkstore"
+  POSTGRES_USER: "monkstore"

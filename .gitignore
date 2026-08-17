@@ -63,3 +63,20 @@ Thumbs.db
 *.key
 id_rsa
 id_rsa.pub
+
+# --- Monkstore lab additions ---
+# Node
+node_modules/
+apps/**/dist/
+
+# Prisma migrations MUST be version-controlled (schema DDL only — no secrets/data).
+# They would otherwise be caught by the global *.sql rule above.
+!apps/backend/prisma/migrations/
+!apps/backend/prisma/migrations/**/*.sql
+
+# Sealed hidden-vulnerability answer key — keep local, never baked into images.
+# (Comment the next line out if you decide to version-control it deliberately.)
+SOLUTIONS.md
+
+# Personal handover / status notes — keep local.
+HANDOVER.md

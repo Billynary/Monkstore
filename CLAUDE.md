@@ -4,92 +4,86 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Purpose
 
-Monkstore is an NFT marketplace being transformed into an **intentionally vulnerable web application** for personal security testing and learning (similar to DVWA/OWASP Juice Shop). All vulnerability additions should fit naturally into the existing routes and features, and must be documented in `VULNERABILITIES.md`.
+Monkstore is an NFT marketplace that is **entirely an intentionally vulnerable web
+application** for personal security testing and learning (DVWA / OWASP Juice Shop
+style). New training vulnerabilities should fit naturally into the routes/features
+and be documented: **known** vulns in `VULNERABILITIES.md`, **hidden** ones in the
+sealed `SOLUTIONS.md` (gitignored, never baked into images).
 
-## Running the App
+The app must never be exposed publicly. Stripe is TEST mode only.
+
+## Running the App (Docker)
 
 ```bash
-# Start all services
-docker compose up --build
-
-# App available at http://localhost:8080
-# Backend API directly at http://localhost:3000
-# PostgreSQL directly at localhost:5432
-
-# Rebuild a single service after changes
-docker compose up --build backend
-
-# View logs
-docker compose logs -f backend
-
-# Reset the database (wipes all data)
-docker compose down -v && docker compose up --build
+docker compose up --build          # web :8081, backend API :3000, postgres :5432
+docker compose run --rm backend npx prisma migrate deploy   # apply migrations
+docker compose run --rm backend npm run seed                # seed catalog (idempotent)
+docker compose down -v && docker compose up --build         # full reset
 ```
 
-There are no tests and no linter configured.
+There are no tests. Type-checking happens at build time (`tsc` / `vite build`).
 
 ## Architecture
 
-Four Docker services orchestrated by `docker-compose.yml`:
+Monorepo under `apps/`, orchestrated by `docker-compose.yml`:
 
-- **nginx** (`:8080`) — reverse proxy; routes `/api/*` to the backend, everything else to the frontend
-- **frontend** — static nginx serving HTML/CSS/JS from `./frontend/`; scaled to 3 instances
-- **backend** — Node.js 20 with **zero npm dependencies**; runs `backend/server.js` directly via `node server.js`
-- **db** — PostgreSQL; schema in `postgresql/db.sql`, seed data in `postgresql/data.sql`
+- **db** — dedicated PostgreSQL 16. Schema is managed by **Prisma migrations**
+  (`apps/backend/prisma/migrations`), not raw SQL files.
+- **backend** (`apps/backend`, `:3000`) — **TypeScript + Fastify + Prisma**. Entry
+  `src/server.ts`. Secure-core routes in `src/routes/*`; the classic lab vulns are
+  isolated in `src/lab/index.ts`. Passwords use **argon2id** (`@node-rs/argon2`);
+  custom HS256 JWTs in `src/lib/auth.ts`. Input validation via **Zod**.
+- **web** (`apps/frontend`, `:8081`) — **Vite + TypeScript** SPA built to static
+  files and served by nginx, which also reverse-proxies `/api` → `backend:3000`
+  (`apps/frontend/nginx.conf`). This single service replaces the old separate
+  nginx + frontend containers.
 
-### Backend internals (`backend/server.js`)
+Kubernetes manifests are in `k8s/` (namespace `monkstore-lab`); services are named
+`db` / `backend` / `web` so the same `DATABASE_URL` and nginx proxy config work in
+both Compose and K8s.
 
-The entire API is a single file with manual `if` blocks matching `pathname`. Key architectural quirk: **SQL is not executed via a database driver**. Instead, every query shells out to `psql` via `child_process.exec`:
+### Data access
 
-```js
-exec(`psql "${DATABASE_URL}" -t -A -F '' -c '${escapedSQL}'`, callback)
-```
+All secure-core queries go through **Prisma** (parameterized). SQL-injection labs
+deliberately use `prisma.$queryRawUnsafe` inside `src/lab/`. There is no more
+`psql` shell-out.
 
-This means SQL injection can also become command injection depending on how shell escaping is handled. New routes follow the same pattern: read body → build SQL string → call `runQuery` → parse JSON result → `respond()`.
+### Database schema (Prisma models → tables)
 
-Auth uses a custom JWT implementation (no library): `generateToken` / `verifyToken` in `server.js`, tokens stored in `localStorage` on the client. There is no role/admin column in the `profile` table yet.
+`users` (+`is_admin`), `wallets` (token balance), `nfts` + `nft_traits`,
+`ownerships` (inventory), `cart_items`, `transactions`, `deposits`, `reviews`.
+Prices are denominated in in-app **tokens**. New users start with 1000 tokens.
 
-### Frontend internals
+### Frontend
 
-Vanilla ES6 modules. `frontend/js/api.js` is the central HTTP client; all other JS files import from it. Auth state is kept in `localStorage` (`authToken`, `user`). Pages: `index.html`, `shop.html`, `cart.html`, `profile.html`, `login.html`, `nft.html`.
+Vite multi-page app. `src/api.ts` is the typed HTTP client; each page has its own
+`src/*.ts` entry. Auth state in `localStorage` (`authToken`, `user`). Pages:
+`index`, `shop`, `cart`, `profile`, `login`, `nft`, `admin`.
 
-### Database schema
+## Intentional Vulnerabilities
 
-| Table | Key columns |
-|---|---|
-| `profile` | `id` (UUID), `username`, `email`, `password` (SHA-256+salt), `joined_at` |
-| `monkeys` | `id` (TEXT, e.g. `monk-001`), `name`, `image_url`, `rarity`, `price` |
-| `monkey_traits` | `monkey_id` (FK), `background`, `fur`, `headgear`, `prop` |
-| `shoppingcart` | `profile_id` (FK), `monkey_id` (FK), `quantity` |
+The **known** set (11 classic + 4 shop/currency) is documented with exploitation
+hints in `VULNERABILITIES.md`. **Hidden** challenges (IDOR, prototype pollution,
+SSRF, reusable promo, DOM XSS, source-map leak, timing-unsafe JWT compare) are in
+`SOLUTIONS.md`. Every page carries the red `.vuln-banner`.
 
-### Credentials & config (`.env`)
+## Development Guidelines
 
-```
-DATABASE_URL=postgresql://admin:NYadmin!@db:5432/monkeymint
-JWT_SECRET=044c01014b55d5f8989d7ffb8520dad5331cea9e44f04806f084ea1c7c1a6e2a
-```
+- New **known** vuln → document in `VULNERABILITIES.md`. New **hidden** vuln →
+  document only in `SOLUTIONS.md` (which is gitignored and not copied into images).
+- Keep the secure core genuinely secure (argon2, parameterized Prisma queries,
+  verified JWTs). Intentional weaknesses are marked `[VULN]` / `[HIDDEN]` in code.
+- `/api/debug` must NOT expose Stripe keys (only DB creds + `JWT_SECRET`).
 
-## Intentional Vulnerabilities (summary)
+## Secrets & .gitignore
 
-All vulnerabilities are documented with exploitation hints in `VULNERABILITIES.md`.
+- `.env` and `*.sql` **data** files are gitignored. Prisma migrations
+  (`apps/backend/prisma/migrations/**/*.sql`) are explicitly re-included (schema DDL,
+  no secrets). Anything matching `*secret*` (e.g. `k8s/secret.yaml`) is gitignored.
+- All credentials (DB, `JWT_SECRET`, Stripe test keys) come from `.env` / K8s
+  Secrets — never hardcoded.
 
-| Endpoint | Vulnerability |
-|---|---|
-| `GET /api/search?q=` | SQL Injection (direct concatenation) |
-| `GET /api/ping?host=` | Command Injection (`exec` with raw input) |
-| `GET /api/user?id=` | IDOR (no auth, returns password hash) |
-| `GET /api/admin/users` | Broken Access Control (`X-Admin: true` header bypass) |
-| `GET /api/file?name=` | LFI / Path Traversal |
-| `POST /api/upload` | Unrestricted File Upload (no MIME/ext check) |
-| `GET /api/debug` | Sensitive Data Exposure (JWT_SECRET, DB creds) |
-| `GET /api/session` | Insecure Deserialization (unsigned base64 cookie) |
-| `POST /api/reviews` → `/nft.html` | Stored XSS (innerHTML rendering) |
-| Shop search box | Reflected XSS (`displayNFTs()` in `main.js`) |
+## Legacy
 
-The `reviews` table is auto-created at startup via `server.listen` callback. The warning banner (`.vuln-banner` CSS class, red sticky bar) is present on every page.
-
-## Vulnerability Development Guidelines
-
-- Every new vulnerability must be documented in `VULNERABILITIES.md`.
-- The `runQuery` shell-out architecture means some SQL injection payloads can also break shell context — document this in any new SQLi additions.
-- The `is_admin` column does not exist in `profile` yet — adding it is the natural hook for future role-based access control scenarios.
+The original top-level `backend/`, `frontend/`, `postgresql/`, `nginx/` directories
+are superseded by `apps/` and `k8s/` and can be deleted.

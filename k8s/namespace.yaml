@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monkstore-lab
+  labels:
+    app.kubernetes.io/part-of: monkstore
+    monkstore/purpose: intentionally-vulnerable-lab

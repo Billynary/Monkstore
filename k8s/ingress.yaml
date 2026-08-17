@@ -1,0 +1,22 @@
+# Routes everything to the web service (which serves the SPA and proxies /api).
+# Add "127.0.0.1 monkstore.local" to /etc/hosts when testing locally.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: monkstore-ingress
+  namespace: monkstore-lab
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: monkstore.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web
+                port:
+                  number: 80
