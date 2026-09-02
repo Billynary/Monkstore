@@ -1,0 +1,76 @@
+# Monkstore lab — the ONE orchestration file, used identically for local
+# development and for the homelab host (home-monkstore, an LXC running Docker).
+# INTENTIONALLY VULNERABLE training app. Do not expose to any public network.
+#
+# Everything that differs between "my laptop" and "the homelab box" is an
+# environment variable with a local-dev default, so Ansible only has to drop a
+# different .env next to this file. There is no second compose file to keep in
+# sync, and no image registry: every host builds from this checkout.
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      # Published so db.monkstore.<domain> resolves to something reachable.
+      # On the homelab host UFW fences this port; locally it is just convenient.
+      - "${DB_PORT:-5432}:5432"
+    networks: [monknet]
+
+  backend:
+    build: ./apps/backend
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./apps/backend/prisma:/app/prisma
+    ports:
+      # The API is reachable through web:/api/ anyway. It is published on its
+      # own port because poking the API directly is half the point of a lab.
+      - "${BACKEND_PORT:-3000}:3000"
+    networks: [monknet]
+
+  # One-shot: apply migrations + seed the catalog, then exit. Idempotent, so it
+  # is safe on every `up` — that is what makes the stack self-provisioning on a
+  # freshly built host.
+  seed:
+    build: ./apps/backend
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./apps/backend/prisma:/app/prisma
+    command: ["sh", "-c", "npx prisma migrate deploy && npm run seed"]
+    restart: "no"
+    networks: [monknet]
+
+  web:
+    build: ./apps/frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      # Local default 8081: 8080 is taken by another project on the dev host.
+      # In the homelab Ansible sets WEB_PORT=80 and Traefik terminates TLS.
+      - "${WEB_PORT:-8081}:80"
+    networks: [monknet]
+
+networks:
+  monknet:
+
+volumes:
+  db_data:

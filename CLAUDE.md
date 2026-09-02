@@ -12,16 +12,24 @@ sealed `SOLUTIONS.md` (gitignored, never baked into images).
 
 The app must never be exposed publicly. Stripe is TEST mode only.
 
-## Running the App (Docker)
+## Running the App (Docker Compose)
 
 ```bash
-docker compose up --build          # web :8081, backend API :3000, postgres :5432
-docker compose run --rm backend npx prisma migrate deploy   # apply migrations
-docker compose run --rm backend npm run seed                # seed catalog (idempotent)
-docker compose down -v && docker compose up --build         # full reset
+docker compose up -d --build       # web :8081, backend API :3000, postgres :5432
+docker compose down -v && docker compose up -d --build      # full reset
 ```
 
-There are no tests. Type-checking happens at build time (`tsc` / `vite build`).
+The one-shot `seed` service runs `prisma migrate deploy` + `npm run seed` on
+every `up` and exits, so the stack provisions itself. To do it by hand:
+
+```bash
+docker compose run --rm backend npx prisma migrate deploy
+docker compose run --rm backend npm run seed
+```
+
+Published ports come from `WEB_PORT` / `BACKEND_PORT` / `DB_PORT` in `.env`
+(defaults 8081 / 3000 / 5432). There are no tests. Type-checking happens at
+build time (`tsc` / `vite build`).
 
 ## Architecture
 
@@ -38,9 +46,10 @@ Monorepo under `apps/`, orchestrated by `docker-compose.yml`:
   (`apps/frontend/nginx.conf`). This single service replaces the old separate
   nginx + frontend containers.
 
-Kubernetes manifests are in `k8s/` (namespace `monkstore-lab`); services are named
-`db` / `backend` / `web` so the same `DATABASE_URL` and nginx proxy config work in
-both Compose and K8s.
+There is exactly ONE deployment unit: `docker-compose.yml`. The same file runs
+locally and on the homelab host, which is a plain Docker host (LXC), not a
+Kubernetes node. Anything host-specific is an environment variable with a
+local-dev default, so no second compose file exists to drift.
 
 ### Data access
 
@@ -75,15 +84,28 @@ SSRF, reusable promo, DOM XSS, source-map leak, timing-unsafe JWT compare) are i
   verified JWTs). Intentional weaknesses are marked `[VULN]` / `[HIDDEN]` in code.
 - `/api/debug` must NOT expose Stripe keys (only DB creds + `JWT_SECRET`).
 
+## Deployment
+
+Hosts get the code by **cloning this repository from GitHub and building
+locally** (`git clone` -> render `.env` -> `docker compose up -d --build`), not
+by pulling images from a registry. Consequence: `docker-compose.yml`, the
+Dockerfiles and the `.dockerignore` files MUST stay version-controlled. Do not
+re-add them to `.gitignore`.
+
+The homelab side lives in the private `Linux-Automation` repo:
+`ansible/roles/home-monkstore` (service) plus the shared `app_source` role (the
+git checkout). Host: `home-monkstore`, an LXC with Docker at `192.168.0.101`.
+
 ## Secrets & .gitignore
 
 - `.env` and `*.sql` **data** files are gitignored. Prisma migrations
   (`apps/backend/prisma/migrations/**/*.sql`) are explicitly re-included (schema DDL,
-  no secrets). Anything matching `*secret*` (e.g. `k8s/secret.yaml`) is gitignored.
-- All credentials (DB, `JWT_SECRET`, Stripe test keys) come from `.env` / K8s
-  Secrets — never hardcoded.
+  no secrets). Anything matching `*secret*` is gitignored.
+- All credentials (DB, `JWT_SECRET`, Stripe test keys) come from `.env` — never
+  hardcoded. On the homelab host that file is rendered from Ansible Vault (0600).
 
 ## Legacy
 
 The original top-level `backend/`, `frontend/`, `postgresql/`, `nginx/` directories
-are superseded by `apps/` and `k8s/` and can be deleted.
+are superseded by `apps/` and can be deleted. The `k8s/` manifests are gone: the
+k3s VM they targeted no longer exists.

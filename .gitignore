@@ -10,11 +10,12 @@ TODO.txt
 *.todo
 
 # Docker
+# NOTE: docker-compose.yml, the Dockerfiles and the .dockerignore files are
+# TRACKED on purpose. Every host (including the homelab LXC) deploys by cloning
+# this repository and running `docker compose up -d --build` — if the compose
+# file is not in the repo, there is nothing to deploy. Only local overrides stay
+# out of version control.
 docker-compose.override.yml
-.dockerignore
-docker-compose.yml
-*/Dockerfile
-*/dockerfile
 
 # Database files and data
 postgresql/
