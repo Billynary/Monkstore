@@ -7,8 +7,8 @@ small NFT marketplace where you buy "monkeys" with an in-app currency (Monk Toke
 > ⚠️ **The entire app is a lab. Never expose it to a public network.**
 
 Documented vulnerabilities live in [`VULNERABILITIES.md`](./VULNERABILITIES.md).
-Additional **hidden** challenges are kept in a sealed, gitignored `SOLUTIONS.md`
-that is never baked into any image.
+Additional **hidden** challenges are kept in a sealed, git-ignored
+`docs/solutions.md` that is never baked into any image.
 
 ## Tech Stack
 
@@ -25,19 +25,20 @@ that is never baked into any image.
 ## Layout
 
 ```
-apps/backend      Fastify + Prisma API (secure core in src/routes, lab vulns in src/lab)
-apps/frontend     Vite + TS SPA (nginx serves it and proxies /api)
-docker-compose.yml    the single deployment unit — tracked in git on purpose
-.env / .env.example
+apps/api              Fastify + Prisma API (secure core in src/routes, lab vulns in src/lab)
+apps/web              Vite + TS SPA (nginx serves it and proxies /api)
+deploy/               Dockerfiles and the nginx config
+docker-compose.yml    the single deployment unit, tracked in git on purpose
 VULNERABILITIES.md    documented (known) vulns
-SOLUTIONS.md          sealed hidden-vuln answer key (gitignored, not in images)
+docs/                 working notes, git-ignored
+docs/solutions.md     sealed hidden-vuln answer key, never baked into an image
 ```
 
 ## Run it (Docker Compose)
 
 ```bash
-cp .env.example .env        # then edit values (a dev .env is already present)
-docker compose up -d --build
+make env                    # copy .env.example to .env, then edit the values
+make up
 #   web  http://localhost:8081
 #   api  http://localhost:3000
 #   db   localhost:5432
@@ -48,11 +49,10 @@ The `seed` service applies Prisma migrations and seeds the catalog on every
 host with no follow-up commands. To run it by hand anyway:
 
 ```bash
-docker compose run --rm backend npx prisma migrate deploy
-docker compose run --rm backend npm run seed
+make seed
 ```
 
-Reset everything: `docker compose down -v && docker compose up -d --build`.
+Reset everything: `make reset`. `make help` lists every target.
 
 ### Ports
 
@@ -82,10 +82,10 @@ over Compose for a four-container stack.
 
 ## Secrets
 
-- `.env` and all `*.sql` **data** files are gitignored. Prisma **migrations**
-  (`apps/backend/prisma/migrations/**/*.sql`) are intentionally tracked (schema DDL,
+- `.env` is git-ignored, and so is `docs/`. Prisma **migrations**
+  (`apps/api/prisma/migrations/**/*.sql`) are intentionally tracked (schema DDL,
   no secrets). Anything matching `*secret*` is gitignored.
-- DB creds, `JWT_SECRET`, and Stripe test keys come from `.env` — never hardcoded.
+- DB credentials, `JWT_SECRET` and the Stripe test keys come from `.env`, never hardcoded.
   On the homelab host that `.env` is rendered from Ansible Vault, mode `0600`.
 
 ---

@@ -1,0 +1,9 @@
+.git/
+node_modules/
+apps/**/dist/
+docs/
+.env
+.env.*
+!.env.example
+*.md
+Makefile

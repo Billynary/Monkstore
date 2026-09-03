@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Monkey Marketplace</title>
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <div class="vuln-banner">⚠️ This app is intentionally vulnerable. For local testing only.</div>
+    <header class="header">
+      <nav class="nav">
+        <a href="index.html" class="nav__logo">
+          <span class="nav__logo-emoji">🐒</span>
+          <span class="nav__logo-text">Monkey Marketplace</span>
+        </a>
+        <ul class="nav__links">
+          <li><a href="shop.html" class="nav__link">Shop</a></li>
+          <li>
+            <a href="cart.html" class="nav__link"
+              >Cart <span class="nav__cart-badge" id="cartBadge">0</span></a
+            >
+          </li>
+          <li><a href="profile.html" class="nav__link">Profile</a></li>
+          <li><a href="login.html" class="nav__link login-link">Login</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main class="main">
+      <div
+        id="notice"
+        class="container"
+        style="
+          display: none;
+          background: var(--color-card);
+          border: 1px solid var(--color-border);
+          border-radius: 8px;
+          padding: 1rem;
+          margin: 1rem auto;
+          color: var(--color-text);
+        "
+      ></div>
+      <section class="hero">
+        <div class="hero__content">
+          <h1 class="hero__title">Legendary<br />Monkey NFTs</h1>
+          <p class="hero__description">
+            Collect rare and mythical monkey NFTs with unique traits, backgrounds, and accessories.
+            Buy with Monk Tokens 🪙.
+          </p>
+          <a href="shop.html" class="btn btn--primary hero__cta">Explore Collection</a>
+        </div>
+      </section>
+
+      <section class="features">
+        <div class="container">
+          <h2 class="features__title">Why Choose Monkey Marketplace?</h2>
+          <div class="features__grid">
+            <div class="feature-card">
+              <div class="feature-card__icon">🎨</div>
+              <h3 class="feature-card__title">Unique Artwork</h3>
+              <p class="feature-card__description">
+                Each monkey is procedurally generated with rare traits.
+              </p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-card__icon">💎</div>
+              <h3 class="feature-card__title">Rarity System</h3>
+              <p class="feature-card__description">
+                From Common to Mythic — discover legendary monkeys.
+              </p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-card__icon">🪙</div>
+              <h3 class="feature-card__title">Monk Tokens</h3>
+              <p class="feature-card__description">
+                Top up your balance and collect with in-app currency.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container"><p>&copy; 2024 Monkey Marketplace.</p></div>
+    </footer>
+    <script type="module" src="/src/home.ts"></script>
+  </body>
+</html>

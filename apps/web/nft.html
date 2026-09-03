@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NFT - Monkey Marketplace</title>
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <div class="vuln-banner">⚠️ This app is intentionally vulnerable. For local testing only.</div>
+    <header class="header">
+      <nav class="nav">
+        <a href="index.html" class="nav__logo"
+          ><span class="nav__logo-emoji">🐒</span
+          ><span class="nav__logo-text">Monkey Marketplace</span></a
+        >
+        <ul class="nav__links">
+          <li><a href="shop.html" class="nav__link">Shop</a></li>
+          <li>
+            <a href="cart.html" class="nav__link"
+              >Cart <span class="nav__cart-badge" id="cartBadge">0</span></a
+            >
+          </li>
+          <li><a href="profile.html" class="nav__link">Profile</a></li>
+          <li><a href="login.html" class="nav__link login-link">Login</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main class="main">
+      <div class="container">
+        <div id="nftDetail" style="padding: 2rem 0">
+          <p style="color: var(--color-text)">Loading NFT...</p>
+        </div>
+        <section style="margin-top: 2rem">
+          <h2 style="color: var(--color-text); margin-bottom: 1rem">Community Reviews</h2>
+          <form
+            id="reviewForm"
+            style="
+              display: flex;
+              flex-direction: column;
+              gap: 0.75rem;
+              max-width: 500px;
+              margin-bottom: 2rem;
+            "
+          >
+            <input
+              id="reviewAuthor"
+              type="text"
+              placeholder="Your name"
+              style="
+                padding: 0.5rem;
+                background: var(--color-card);
+                color: var(--color-text);
+                border: 1px solid var(--color-border);
+                border-radius: 4px;
+              "
+            />
+            <textarea
+              id="reviewContent"
+              rows="3"
+              placeholder="Write a review… (HTML allowed)"
+              style="
+                padding: 0.5rem;
+                background: var(--color-card);
+                color: var(--color-text);
+                border: 1px solid var(--color-border);
+                border-radius: 4px;
+                resize: vertical;
+              "
+            ></textarea>
+            <button type="submit" class="btn btn--primary" style="align-self: flex-start">
+              Post Review
+            </button>
+            <div id="reviewStatus" style="font-size: 0.8rem; color: var(--color-primary)"></div>
+          </form>
+          <div id="reviewsList"></div>
+        </section>
+      </div>
+    </main>
+    <script type="module" src="/src/nft.ts"></script>
+  </body>
+</html>

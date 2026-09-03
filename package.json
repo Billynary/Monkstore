@@ -1,0 +1,23 @@
+{
+  "name": "monkstore",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Monkstore - intentionally vulnerable NFT marketplace used as a security lab",
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "lint": "eslint .",
+    "fmt": "prettier --write .",
+    "fmt:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.13.0",
+    "eslint": "^9.13.0",
+    "globals": "^15.11.0",
+    "prettier": "3.9.6",
+    "typescript-eslint": "^8.12.0"
+  }
+}
